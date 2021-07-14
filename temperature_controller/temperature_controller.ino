@@ -24,35 +24,37 @@
 #include <WiFiClientSecure.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
 #include <Arduino.h>
 #include <HTTPClient.h>
-#if defined(ESP32)
-  #include <WiFi.h>
-#elif defined(ESP8266)
-  #include <ESP8266WiFi.h>
-#endif
+//#if defined(ESP32)
+#include <WiFi.h>
+//#elif defined(ESP8266)
+//  #include <ESP8266WiFi.h>
+//#endif
 #include <ESP_Mail_Client.h>
 
 #define SMTP_HOST "smtp.gmail.com"
 #define SMTP_PORT 465
 
 /* The wifi credentials */
-#define WIFI_SSID "SSID"
-#define WIFI_PASSWORD "PASSWORD"
+#define WIFI_SSID "ssid"
+#define WIFI_PASSWORD "password"
 
 /* The sign in credentials */
-#define AUTHOR_EMAIL "EXAMPLE@gmail.com"
-#define AUTHOR_PASSWORD "PASSWORD"
+#define AUTHOR_EMAIL "user@gmail.com"
+#define AUTHOR_PASSWORD "password"
 #define AUTHOR_NAME "ESP"
 #define HTML_MSG "<div style=\"color:#2f4468;\"><h1>A temperatura do freezer está acima do permitido.</h1><p>- Sent from ESP board</p></div>"
 
 /* Recipient's email*/
-#define RECIPIENT_EMAIL "EXAMPLE@gmail.com"
+#define RECIPIENT_EMAIL "recipient@gmail.com"
 #define SUBJECT "ESP Warning Email"
 #define RECIPIENT_NAME "Name"
 
 /* Values for sms sender */
-#define KEY "http://maker.ifttt.com/trigger/ESP/with/key/*******"
+#define KEY "http://maker.ifttt.com/trigger/ESP/with/key/%%%%%%%%%%%%%%%"
 #define HOST "maker.ifttt.com"
 #define HTTPS_PORT 443
 
@@ -63,13 +65,17 @@
 #define PIN_BOARD_BUTTON   0
 #define ONE_WIRE_BUS PIN_SENSOR_0
 
+/* Telegram Bot */
+#define BOTtoken "********:*******************************"
+#define CHAT "**********"
 #define MAX_TEMP 25
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-
+WiFiClientSecure client;
 HTTPClient http;
 SMTPSession smtp;
+UniversalTelegramBot bot(BOTtoken, client);
 
 void smtpCallback(SMTP_Status status);
 void send_sms();
@@ -87,7 +93,9 @@ void setup(void)
   Serial.println("Sensors started");
   Serial.println();
   Serial.print("Connecting to AP");
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   while (WiFi.status() != WL_CONNECTED){
     Serial.print(".");
     delay(200);
@@ -116,6 +124,7 @@ void loop(void)
     {
       send_email(); 
       send_sms();
+      bot.sendMessage(CHAT, "A temperatura do freezer está acima do permitido.");
       msgSend = 1;
     }
     else if (msgSend == 1 && tempC < MAX_TEMP)
